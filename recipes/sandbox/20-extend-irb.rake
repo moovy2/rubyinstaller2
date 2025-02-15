@@ -1,8 +1,13 @@
+# This adds some logic to define a .irbrc to enable history saving and completion.
+# These features are enabled by default since ruby-3.3 and require paths have been changed.
+# Therefore the job on later versions is inverted to remove the .irbrc when unchanged.
+
 self.import_files.merge!({
-  "resources/files/irbrc_predefiner.rb" => "lib/ruby/site_ruby/#{package.rubyver2}.0/irbrc_predefiner.rb",
+  "resources/files/irbrc_predefiner.rb" => "lib/ruby/site_ruby/#{package.rubylibver}/irbrc_predefiner.rb",
 })
 
-file File.join(sandboxdir, "bin/irb.cmd") => File.join(unpackdirmgw, "bin/irb.cmd") do |t|
+irbbin = package.rubyver2 < "3.1" ? "bin/irb.cmd" : "bin/irb"
+file File.join(sandboxdir, irbbin) => File.join(unpackdirmgw, irbbin) do |t|
   puts "generate #{t.name}"
   out = File.binread(t.prerequisites.first)
   mod = out.gsub('require "irb"', 'require "irbrc_predefiner"; require "irb"')

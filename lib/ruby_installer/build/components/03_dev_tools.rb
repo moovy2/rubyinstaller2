@@ -52,6 +52,7 @@ class DevTools < Base
     'mingw32' => PACKAGES_MINGW32,
     'mingw64' => PACKAGES_MINGW64,
     'ucrt64' => PACKAGES_MINGW64,
+    'clangarm64' => PACKAGES_MINGW64,
   }
 
   def execute(args)
@@ -63,6 +64,9 @@ class DevTools < Base
       res = run_verbose("pacman", "-S", *pacman_args, *packages)
       puts "Install #{description} #{res ? green("succeeded") : red("failed")}"
       raise "pacman failed" unless res
+
+      puts
+      puts green("You can use 'ridk enable' to activate the MSYS2 tools on the command prompt.")
 
       autorebase
     end

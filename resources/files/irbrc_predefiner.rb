@@ -2,12 +2,22 @@ require 'irb'
 
 irbrc_file = IRB.enum_for(:rc_file_generators).first.call(IRB::IRBRC_EXT)
 
-if irbrc_file && !File.exist?(irbrc_file) && File.exist?(File.dirname(irbrc_file))
-  File.write irbrc_file, <<-EOT
+irbrc_text = <<-EOT
 require 'irb/ext/save-history'
 require 'irb/completion'
 IRB.conf[:SAVE_HISTORY] = 200
-  EOT
+EOT
+
+if RUBY_VERSION < "3.3"
+  # Create a .irbrc file with default options on older rubies
+  if irbrc_file && !File.exist?(irbrc_file) && File.exist?(File.dirname(irbrc_file))
+    File.write irbrc_file, irbrc_text
+  end
+else
+  # Remove the now unnecessary .irbrc file when unchanged on newer rubies
+  if irbrc_file && File.exist?(irbrc_file) && File.read(irbrc_file) == irbrc_text
+    File.unlink irbrc_file
+  end
 end
 
 # Try to convert .irb_history from locale to UTF-8, if it isn't encoded properly.

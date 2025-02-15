@@ -1,5 +1,6 @@
-bin/libcrypto-1_1.dll
+bin/libcrypto-3.dll
 bin/libgcc_s_dw2-1.dll
-bin/libssl-1_1.dll
-bin/msvcrt-ruby320.dll
-lib/libmsvcrt-ruby320.dll.a
+bin/libssl-3.dll
+bin/libwinpthread-1.dll
+bin/msvcrt-ruby350.dll
+lib/libmsvcrt-ruby350.dll.a

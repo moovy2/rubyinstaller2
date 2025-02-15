@@ -67,11 +67,24 @@ class TestStdlib < Minitest::Test
 
     case RUBY_VERSION
       when /^2\.[34]\./
-        assert_match(/OpenSSL 1.0./, OpenSSL::OPENSSL_VERSION)
-        assert_match(/OpenSSL 1.0./, OpenSSL::OPENSSL_LIBRARY_VERSION)
+        assert_match(/OpenSSL 1\.0\./, OpenSSL::OPENSSL_VERSION)
+        assert_match(/OpenSSL 1\.0\./, OpenSSL::OPENSSL_LIBRARY_VERSION)
+      when /^2\.[567]\.|^3\.[01]\./
+        assert_match(/OpenSSL 1\.1\./, OpenSSL::OPENSSL_VERSION)
+        assert_match(/OpenSSL 1\.1\./, OpenSSL::OPENSSL_LIBRARY_VERSION)
       else
-        assert_match(/OpenSSL 1.1./, OpenSSL::OPENSSL_VERSION)
-        assert_match(/OpenSSL 1.1./, OpenSSL::OPENSSL_LIBRARY_VERSION)
+        assert_match(/OpenSSL 3\./, OpenSSL::OPENSSL_VERSION)
+        assert_match(/OpenSSL 3\./, OpenSSL::OPENSSL_LIBRARY_VERSION)
     end
+  end
+
+  def test_openssl_provider
+    # ruby-3.2 has OpenSSL-3.x which supports provider API, but the ruby C-ext is too old there
+    return if RUBY_VERSION =~ /^2\.[34567]\.|^3\.[012]\./
+    require "openssl"
+
+    OpenSSL::Provider.load("legacy")
+    cipher = OpenSSL::Cipher.new("RC4")
+    assert_equal "RC4", cipher.name
   end
 end

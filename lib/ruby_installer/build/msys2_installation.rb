@@ -5,6 +5,7 @@ module Build # Use for: Build, Runtime
   # :nodoc:
   class Msys2Installation
     MSYS2_INSTALL_KEY = "SOFTWARE/Microsoft/Windows/CurrentVersion/Uninstall/"
+    MSYS2_INSTALL_KEY_WOW = "SOFTWARE/WOW6432Node/Microsoft/Windows/CurrentVersion/Uninstall/"
 
     class MsysNotFound < RuntimeError
     end
@@ -20,11 +21,12 @@ module Build # Use for: Build, Runtime
       @msys_path = msys_path
       @msys_path_fixed = msys_path ? true : false
       @mingwdir = nil
-      @mingwarch = mingwarch || ENV['MSYSTEM']&.downcase || (
+      @mingwarch = mingwarch || (
           case RUBY_PLATFORM
             when /x64.*ucrt/ then 'ucrt64'
             when /x64.*mingw32/ then 'mingw64'
             when /i386.*mingw32/ then 'mingw32'
+            when /aarch64-mingw-ucrt/ then 'clangarm64'
             else raise "unsupported ruby platform #{RUBY_PLATFORM.inspect}"
           end
         )
@@ -33,6 +35,7 @@ module Build # Use for: Build, Runtime
           when 'mingw32' then "mingw-w64-i686"
           when 'mingw64' then "mingw-w64-x86_64"
           when 'ucrt64'  then "mingw-w64-ucrt-x86_64"
+          when 'clangarm64' then "mingw-w64-clang-aarch64"
           else raise "unknown mingwarch #{@mingwarch.inspect}"
         end
       end
@@ -45,6 +48,10 @@ module Build # Use for: Build, Runtime
     end
 
     def iterate_msys_paths
+      # Prefer MSYS2_PATH if ENV set
+      if ENV["MSYS2_PATH"]
+        yield ENV["MSYS2_PATH"]
+      end
       # Prefer MSYS2 when installed within the ruby directory.
       yield File.join(RbConfig::TOPDIR, "msys64")
       yield File.join(RbConfig::TOPDIR, "msys32")
@@ -59,20 +66,29 @@ module Build # Use for: Build, Runtime
 
       # If msys2 is installed per installer.exe
       require "win32/registry"
-      begin
-        Win32::Registry::HKEY_CURRENT_USER.open(backslachs(MSYS2_INSTALL_KEY)) do |reg|
-          reg.each_key do |subkey|
-            subreg = reg.open(subkey)
-            begin
-              if subreg['DisplayName'] =~ /^MSYS2 / && File.directory?(il=subreg['InstallLocation'])
-                yield il
+      [
+        [Win32::Registry::HKEY_CURRENT_USER, MSYS2_INSTALL_KEY],
+        [Win32::Registry::HKEY_CURRENT_USER, MSYS2_INSTALL_KEY_WOW],
+        [Win32::Registry::HKEY_LOCAL_MACHINE, MSYS2_INSTALL_KEY],
+        [Win32::Registry::HKEY_LOCAL_MACHINE, MSYS2_INSTALL_KEY_WOW],
+      ].each do |reg_root, base_key|
+        begin
+          reg_root.open(backslachs(base_key)) do |reg|
+            reg.each_key do |subkey|
+              subreg = reg.open(subkey)
+              begin
+                if subreg['DisplayName'] =~ /^MSYS2 / && File.directory?(il=subreg['InstallLocation'])
+                  yield il
+                end
+              rescue Encoding::InvalidByteSequenceError, Win32::Registry::Error
+                # Ignore entries without valid installer data or broken character encoding
               end
-            rescue Encoding::InvalidByteSequenceError, Win32::Registry::Error
-              # Ignore entries without valid installer data or broken character encoding
             end
+          rescue Encoding::InvalidByteSequenceError, Encoding::UndefinedConversionError
+            # Avoid crash even if subkey includes inconvertible characters to internal encoding
           end
+        rescue Win32::Registry::Error
         end
-      rescue Win32::Registry::Error
       end
 
       ENV['PATH'] && ENV['PATH'].split(";").each do |path|
@@ -81,7 +97,10 @@ module Build # Use for: Build, Runtime
       end
 
       # If msys2 is installed by scoop package manager
-      yield IO.popen(["scoop", "prefix", "msys2"], &:read).strip rescue StandardError
+      begin
+        yield IO.popen(["scoop", "prefix", "msys2"], &:read).strip
+      rescue SystemCallError
+      end
 
       raise MsysNotFound, "MSYS2 could not be found"
     end
@@ -111,6 +130,9 @@ module Build # Use for: Build, Runtime
     def enable_dll_search_paths
       @mingwdir ||= begin
         DllDirectory.set_defaults
+        # Add bundled dll directory for libcrypto.dll loading zlib.dll and legacy.dll loading libcrypto.dll
+        DllDirectory.new(RbConfig::CONFIG["rubyarchdir"])
+        # Add MSYS2-MINGW DLL directory for user-installed gems
         path = mingw_bin_path
         DllDirectory.new(path) if File.directory?(path)
       rescue MsysNotFound
@@ -141,6 +163,10 @@ module Build # Use for: Build, Runtime
       vars['ACLOCAL_PATH'] = "#{mingw_prefix}/share/aclocal:/usr/share/aclocal"
       vars['MANPATH'] = "#{mingw_prefix}/share/man"
       vars['MINGW_PACKAGE_PREFIX'] = mingw_package_prefix
+      if ENV['TMP'] !~ /\A[ -~]*\z/
+        # TMP has some Unicode characters -> use MSYS2's /tmp to work around incompat with gcc's temporary files
+        vars['TMP'] = backslachs( msys_path + "/tmp" )
+      end
 
       case mingwarch
         when 'mingw32'
@@ -161,11 +187,21 @@ module Build # Use for: Build, Runtime
           vars['MSYSTEM_CHOST'] = 'x86_64-w64-mingw32'
           vars['MINGW_CHOST'] = vars['MSYSTEM_CHOST']
           vars['MINGW_PREFIX'] = vars['MSYSTEM_PREFIX']
+        when 'clangarm64'
+          vars['MSYSTEM_PREFIX'] = '/clangarm64'
+          vars['MSYSTEM_CARCH'] = 'aarch64'
+          vars['MSYSTEM_CHOST'] = 'aarch64-w64-mingw32'
+          vars['MINGW_CHOST'] = vars['MSYSTEM_CHOST']
+          vars['MINGW_PREFIX'] = vars['MSYSTEM_PREFIX']
         else raise "unknown mingwarch #{@mingwarch.inspect}"
       end
 
-      locale = IO.popen([File.join(msys_bin, "locale"), "-uU"], &:read) rescue SystemCallError
-      vars['LANG'] = locale=~/UTF-8/ ? locale.to_s.strip : 'C'
+      begin
+        locale = IO.popen([File.join(msys_bin, "locale"), "-uU"], &:read)
+      rescue SystemCallError
+      else
+        vars['LANG'] = locale=~/UTF-8/ ? locale.to_s.strip : 'C'
+      end
 
       vars
     end
@@ -294,29 +330,36 @@ module Build # Use for: Build, Runtime
       end.join(";")
     end
 
+    @@pacman_lock = Mutex.new
+    private def with_pacman_lock(&block)
+      @@pacman_lock.synchronize(&block)
+    end
+
     def install_packages(packages, verbose: false)
       return if packages.empty?
 
       with_msys_apps_enabled do
-        # Find packages that are already installed
-        skips, installs = packages.partition do |package|
-          IO.popen(["pacman", "-Q", package], err: :out, &:read)
-          $?.success?
-        end
+        with_pacman_lock do
+          # Find packages that are already installed
+          skips, installs = packages.partition do |package|
+            IO.popen(["pacman", "-Q", package], err: :out, &:read)
+            $?.success?
+          end
 
-        Gem.ui.say("Using msys2 packages: #{skips.join(" ")}") if verbose && skips.any?
+          Gem.ui.say("Using msys2 packages: #{skips.join(" ")}") if verbose && skips.any?
 
-        # Install required packages
-        if installs.any?
-          Gem.ui.say("Installing required msys2 packages: #{installs.join(" ")}") if verbose
+          # Install required packages
+          if installs.any?
+            Gem.ui.say("Installing required msys2 packages: #{installs.join(" ")}") if verbose
 
-          args = ["pacman", "-S", "--needed", "--noconfirm", *installs]
-          Gem.ui.say("> #{args.join(" ")}") if verbose==1
+            args = ["pacman", "-S", "--needed", "--noconfirm", *installs]
+            Gem.ui.say("> #{args.join(" ")}") if verbose==1
 
-          res = IO.popen(args, &:read)
-          raise CommandError, "pacman failed with the following output:\n#{res}" if !$? || $?.exitstatus != 0
+            res = IO.popen(args, &:read)
+            raise CommandError, "pacman failed with the following output:\n#{res}" if !$? || $?.exitstatus != 0
 
-          Gem.ui.say(res) if verbose==1
+            Gem.ui.say(res) if verbose==1
+          end
         end
       end
     end

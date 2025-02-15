@@ -35,8 +35,8 @@ module RidkTests
     skip unless File.directory?(msys_path)
 
     ENV['PATH'] += ';"c:\\testpath"'
-    ENV['MSYSTEM'] = 'UCRT64'
-    out = run_output_vars([], ["ridk enable"], %w[PATH MSYSTEM MINGW_PACKAGE_PREFIX])
+    ENV['MSYSTEM'] = 'MINGW32'
+    out = run_output_vars([], ["ridk enable ucrt64"], %w[PATH MSYSTEM MINGW_PACKAGE_PREFIX])
 
     assert_match(/PATH: .*;#{Regexp.escape(msys_path)}\\ucrt64\\bin;#{Regexp.escape(msys_path)}\\usr\\bin.*;"c:\\testpath"$/i, out)
     assert_match(/MSYSTEM: UCRT64/i, out)
@@ -47,6 +47,7 @@ module RidkTests
     skip unless File.directory?(msys_path)
 
     ENV['PATH'] += ';"c:\\testpath"'
+    ENV['MSYSTEM'] = 'UCRT64'
     out = run_output_vars([], ["ridk enable mingw32"], %w[PATH MSYSTEM MINGW_PACKAGE_PREFIX])
 
     assert_match(/PATH: .*;#{Regexp.escape(msys_path)}\\mingw32\\bin;#{Regexp.escape(msys_path)}\\usr\\bin.*;"c:\\testpath"$/i, out)
@@ -89,7 +90,7 @@ module RidkTests
     refute_nil y["ruby_installer"]["package_version"]
     refute_nil y["ruby_installer"]["git_commit"]
     assert_match(/gcc.*MSYS2/, y["cc"])
-    assert_match(/bash.*pc-msys/, y["sh"])
+    assert_match(/bash.*-pc-/, y["sh"])
     assert_match(/windows/i, y["os"])
     assert_equal msys_path, y["msys2"]["path"].downcase
     skip "Appveyors MSYS version is too old to have a components.xml" if ENV['APPVEYOR'] || ENV['GITHUB_ACTION']
@@ -168,8 +169,8 @@ module RidkTests
 
   def find_alternative_ruby
     ar = [
-      ["C:/Ruby24-x64", "/24-x64/", "2\.4\.", /C:\/Ruby24-x64\s+ruby 2\.4\..*x64-mingw32/i, "2.4 x64-mingw32"],
-      ["C:/Ruby25", "/25$/", "2\.5\.", /C:\/Ruby25\s+ruby 2\.5\..*i386-mingw32/i, "2.5 i386-mingw32"],
+      ["C:/Ruby30-x64", "/30-x64/", "3\.0\.", /C:\/Ruby30-x64\s+ruby 3\.0\..*x64-mingw32/i, "3.0 x64-mingw32"],
+      ["C:/Ruby30", "/30$/", "3\.0\.", /C:\/Ruby30\s+ruby 3\.0\..*i386-mingw32/i, "3.0 i386-mingw32"],
     ].find do |path, selector, regex_rver, regex_list, verplat|
       File.directory?(path) && verplat != "#{RUBY_VERSION.split(".").map(&:to_i)[0,2].join(".")} #{RUBY_PLATFORM}"
     end
