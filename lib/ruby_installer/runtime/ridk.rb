@@ -101,7 +101,7 @@ LOGO = %q{
       end
 
       private def args_to_tasks(ci, args)
-        tasks = args.join(" ").split(" ").map do |idx_or_name|
+        args.join(" ").split(" ").map do |idx_or_name|
           if idx_or_name =~ /\A\d+\z/ && (task=ci.installable_components.find{|c| idx_or_name.to_i == c.task_index })
             task
           elsif idx_or_name =~ /\A\w+\z/ && (task=ci.installable_components.find{|c| idx_or_name == c.name })
@@ -110,17 +110,6 @@ LOGO = %q{
             puts red("Can not find component #{idx_or_name.inspect}")
           end
         end.compact
-      end
-
-      def msys_version_info(msys_path)
-        require "rexml/document"
-        doc = File.open( File.join(msys_path, "components.xml") ) do |fd|
-          REXML::Document.new fd
-        end
-        {
-          "title" => doc.elements.to_a("//Packages/Package/Title").first.text,
-          "version" => doc.elements.to_a("//Packages/Package/Version").first.text,
-        }
       end
 
       private def ignore_err
@@ -156,8 +145,7 @@ LOGO = %q{
           msys = Runtime.msys2_installation
           msys.enable_msys_apps(if_no_msys: :raise)
 
-          msys_ver = ignore_err{ msys_version_info(msys.msys_path) }
-          h["msys2"] = { "path" => msys.msys_path }.merge(msys_ver || {})
+          h["msys2"] = { "path" => msys.msys_path }
         end
 
         ignore_err do

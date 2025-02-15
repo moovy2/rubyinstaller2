@@ -17,12 +17,12 @@ end;
 
 function IsNotAdmin(): Boolean;
 begin
-  Result := not (IsAdminLoggedOn or IsPowerUserLoggedOn);
+  Result := not IsAdmin;
 end;
 
 function GetUserHive(): Integer;
 begin
-  if IsAdminLoggedOn or IsPowerUserLoggedOn then
+  if IsAdmin then
     Result := HKLM
   else
     Result := HKCU;
@@ -244,7 +244,7 @@ begin
     // Previous RubyInstaller detected
 
     sUnInstallString := RemoveQuotes(sUnInstallString);
-    sUninstParams := '/NORESTART /SUPPRESSMSGBOXES';
+    sUninstParams := '/NORESTART /SUPPRESSMSGBOXES /allfiles=no';
     if WizardSilent then sUninstParams := sUninstParams + ' /VERYSILENT'
     else sUninstParams := sUninstParams + ' /SILENT';
 

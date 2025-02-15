@@ -57,7 +57,7 @@ class TestSslCacerts < Minitest::Test
     end
   end
 
-  # Can CA certificates added into C:/Ruby24/ssl/certs/<hash>.0 ?
+  # Can CA certificates added into C:/Ruby32/ssl/certs/<hash>.0 ?
   def test_ssl_certs_dir
     certfile = "#{RbConfig::TOPDIR}/ssl/certs/#{pki.ca_cert.subject.hash.to_s(16)}.0"
     File.write(certfile, pki.ca_cert.to_pem)
@@ -128,10 +128,9 @@ class TestSslCacerts < Minitest::Test
   end
 
   def read_and_close_ssl(sio, msg)
-    sio.write(msg)
+    sio.puts(msg)
     sio.flush
-    sio.to_io.close_write
-    res = sio.read
+    res = sio.gets.chomp
     sio.close
     sio.to_io.close
     res

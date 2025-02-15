@@ -104,13 +104,14 @@ Check the [wiki on how to use](https://github.com/oneclick/rubyinstaller2/wiki/F
 - The last command lists all available RubyInstaller build targets.
   The build targets consists of the following parts:
   ```
-    rake ri:ruby-3.0.3-x86-msvcrt:archive-7z
+    rake ri:ruby-3.4.1-x86-msvcrt:archive-7z
           ^      ^      ^    ^        ^- "archive-7z"     => 7z archive of the rubyinstaller files
           |      |      |    |           "installer-inno" => executable installer file
           |      |      |    '------- "msvcrt" => older type of C standard library
           |      |      |             "ucrt"   => new type of C standard library
-          |      |      '------- "x86" => 32 bit ruby and MSYS2 version
-          |      |               "x64" => 64 bit version
+          |      |      '------- "x86" => 32 bit x86 ruby and MSYS2 version
+          |      |               "x64" => 64 bit x86_64 version
+          |      |               "arm" => ARM64 version
           |      '------ "x.x.x" => ruby version to build
           |              "head"  => latest development snapshot of ruby
           '------ "ri"      => RubyInstaller without Devkit
@@ -124,5 +125,5 @@ Check the [wiki on how to use](https://github.com/oneclick/rubyinstaller2/wiki/F
 
 ## Known Issues
 
-- It's best to avoid installation into a PATH containing spaces. Some gems won't install.
+- It's best to avoid installation into a PATH containing spaces or non-ASCII. Some gems won't install with spaces and older ruby versions (<= 3.0.x) ridk won't even run then at all with special characters.
 - Also refer to [the issue list](https://github.com/larskanis/rubyinstaller2/issues).

@@ -36,28 +36,22 @@ class Msys2 < Base
       puts green(" Success")
     else
       puts red(" Failed")
-      raise "MSYS2 installer failed"
+      raise "MSYS2 installer failed.\n\nYou might download MSYS2 from the official site: https://www.msys2.org/ and run the installer manually.\nThen you can use 'ridk install' to install necessary tools and to keep MSYS2 up-to-date."
     end
   end
 
   private
 
-  MSYS2_VERSION = ENV['MSYS2_VERSION'] || "20190524"
-  MSYS2_URI = "http://repo.msys2.org/distrib/<arch>/msys2-<arch>-#{MSYS2_VERSION}.exe"
-
-  MSYS2_I686_SHA256 = "c5a1881f7ac5a0449fe9b30d3140111a88072727f510c4a66bfa905f8c78e839"
-  MSYS2_X86_64_SHA256 = "2dacadcc70cc122054e60914cbc6b689f685bef5713915a90f4185dd9da7954e"
+  MSYS2_VERSION = ENV['MSYS2_VERSION'] || "20241208"
+  MSYS2_URI = "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-#{MSYS2_VERSION}.exe"
+  MSYS2_SHA256 = "dcce4f115cdcb76453c3f0937c8c2629c3b1923f34bc2aa50fd39e9a63ade1fa"
 
   def msys2_download_uri
-    arch = RUBY_PLATFORM=~/x64/ ? "x86_64" : "i686"
-    MSYS2_URI.gsub(/<arch>/, arch)
+    MSYS2_URI
   end
 
   def msys2_download_hash
-    case RUBY_PLATFORM
-      when /x64/ then MSYS2_X86_64_SHA256
-      else MSYS2_I686_SHA256
-    end
+    MSYS2_SHA256
   end
 end
 end

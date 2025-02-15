@@ -1,3 +1,78 @@
+## RubyInstaller-3.0.7-1 - 2024-04-24
+
+### Changed
+- Update to ruby-3.0.7, see [release notes](https://www.ruby-lang.org/en/news/2024/04/23/ruby-3-0-7-released/).
+- Update the SSL CA certificate list.
+- Update to OpenSSL-1.1.1w and because version 1.1.1 is out of maintanence from the OpenSSL project apply all security patches that Canonical provides for Ubuntu-20.04:
+  - CVE-2023-5678
+  - CVE-2024-0727
+  - Implicit rejection as a protection against Bleichenbacher attacks
+- Update the bundled MSYS2 keyring package.
+- Avoid crash even if a registry key incldues inconvertible characters
+- Avoid method redefinition warning in rubygems hook
+- Allow setting of MSYS2 path by environment variable `MSYS2_PATH`. [#361](https://github.com/oneclick/rubyinstaller2/issues/361)
+  This setting is preferred over all other methods to find the MSYS2 directory.
+
+
+## RubyInstaller-3.0.6-1 - 2023-04-01
+
+### Changed
+- Update to ruby-3.0.6, see [release notes](https://www.ruby-lang.org/en/news/2023/03/30/ruby-3-0-6-released/).
+- Update the SSL CA certificate list and to OpenSSL-1.1.1t.
+- Add installer dialog to select per-user or all-users installation.
+  See out Wiki for further [description of the install modes](https://github.com/oneclick/rubyinstaller2/wiki/FAQ#user-content-install-mode).
+- Add installer options /ALLUSERS and /CURRENTUSER for silent install.
+  For silent install see: https://github.com/oneclick/rubyinstaller2/wiki/FAQ#user-content-silent-install
+- Enable automatic private gem installation in user's home on a machine wide ruby setup, if the user doesn't have write access.
+- List machine wide rubies in addition to per-user rubies at `ridk use`.
+- Set proper permissions of MSYS /tmp directory, so that every user can create and use files, but not read or change files of other users.
+  This is needed for a machine wide installation.
+- Check or add a system wide gemrc file at every rubygems load to prevent hijacking by another user.
+- Avoid UNICODE characters in TMP env var to work around issues of gcc. #320
+
+
+## RubyInstaller-3.0.5-1 - 2022-11-27
+
+### Added
+- Restrict write permissions to the installing user.
+  For several reasons we use `C:/RubyXXX` direcory by default but not `C:/Program Files` (see: oneclick/rubyinstaller#135 ).
+  Using an install path under `C:/` previously inherited write permissions for everyone, which compromised security in a multi user environment.
+- `ridk use` Add options to store the change permanently in the user or system environment variables. #314
+
+### Changed
+- Update to ruby-3.0.5, see [release notes](https://www.ruby-lang.org/en/news/2022/11/24/ruby-3-0-5-released/).
+- Update of the SSL CA certificate list.
+- Update the bundled MSYS2 keyring package.
+- Fix start menu entry for rubygems-server.
+- Run the ruby command prompt in the start menu with `ridk enable`.
+- Update the start menu entry with the newly installed ruby version.
+  They kept the old ruby version previously.
+- Fix possible crash in `ridk use`. #291
+
+### Removed
+- No longer create registry keys under `Software\RubyInstaller\MRI\<RubyVersion>`. #242
+  They weren't used any longer and didn't distinguish between 32 and 64-bit versions.
+- No longer install the 32 bit but only the 64 bit version of MSYS2 as part of `ridk install`.
+  It is still possible to get a pure 32-bit MSYS2 and Ruby installation by using the 32-bit RubyInstaller+Devkit package.
+- The file `<ruby>\bin\ruby_builtin_dlls\libssp-0.dll` is no longer shipped as part of RubyInstaller.
+  It is no longer needed with the latest gcc, but previously installed gems with extensions link to this DLL.
+  The dependency to `libssp-0.dll` is currently still fulfilled by the bundled MSYS2 distribution.
+  To re-compile the gem without this DLL `gem pristine --extensions` can be used.
+
+
+## RubyInstaller-3.0.4-1 - 2022-04-19
+
+### Changed
+- Update to ruby-3.0.4, see [release notes](https://www.ruby-lang.org/en/news/2022/04/12/ruby-3-0-4-released/).
+- Update of the SSL CA certificate list.
+- No longer require fiddle before booting Rubygems, but use the new C-extension "win32/dll_directory".
+  Fixes #251
+- Update the bundled MSYS2 keyring package.
+
+### Removed
+- No longer respond to MSYSTEM environment variable for setting a cross build environment. #269
+
+
 ## RubyInstaller-3.0.3-1 - 2021-11-27
 
 ### Added
